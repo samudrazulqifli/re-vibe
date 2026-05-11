@@ -24,8 +24,12 @@ export async function POST(req: Request) {
     const publicUrl = await uploadFile(bucketName, fileName, buffer, file.type);
 
     return NextResponse.json({ url: publicUrl });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });
+    const message = error?.message || 'Failed to upload image';
+    return NextResponse.json(
+      { error: 'Failed to upload image', detail: message },
+      { status: 500 }
+    );
   }
 }

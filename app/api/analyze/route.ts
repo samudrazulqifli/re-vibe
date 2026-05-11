@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from "@google/genai";
+import { generateWithRetry } from '@/src/lib/genai';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
@@ -19,8 +20,8 @@ export async function POST(req: Request) {
       mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+    const response = await generateWithRetry(ai, {
+      model: "gemini-2.5-flash-lite",
       contents: [
         {
           parts: [

@@ -3,18 +3,24 @@ import { Storage } from '@google-cloud/storage';
 let storage: Storage | null = null;
 
 export function getStorage() {
-  if (!storage) {
-    const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    if (keyFile) {
-      storage = new Storage({
-        credentials: JSON.parse(keyFile)
-      });
-    } else {
-      // Fallback for local dev or use GCS_PROJECT_ID if available
-      storage = new Storage({
-        projectId: process.env.GCS_PROJECT_ID
-      });
-    }
+  if (storage) return storage;
+
+  const projectId = process.env.GCS_PROJECT_ID;
+  const inlineJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  const keyFilePath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+  if (inlineJson) {
+    storage = new Storage({
+      projectId,
+      credentials: JSON.parse(inlineJson),
+    });
+  } else if (keyFilePath) {
+    storage = new Storage({
+      projectId,
+      keyFilename: keyFilePath,
+    });
+  } else {
+    storage = new Storage({ projectId });
   }
   return storage;
 }
@@ -31,8 +37,14 @@ export async function uploadFile(bucketName: string, fileName: string, buffer: B
     },
   });
 
-  // Make public for the preview
-  await file.makePublic();
+  try {
+    await file.makePublic();
+  } catch (err: any) {
+    const msg = String(err?.message || '');
+    const isUniformAccess =
+      err?.code === 400 || err?.code === 412 || msg.includes('uniform bucket-level access');
+    if (!isUniformAccess) throw err;
+  }
 
   return `https://storage.googleapis.com/${bucketName}/${fileName}`;
 }
