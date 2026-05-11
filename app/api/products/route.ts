@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from "@google/genai";
-import { generateWithRetry } from '@/src/lib/genai';
+import { generateWithRetry, GenAIQuotaError } from '@/src/lib/genai';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
@@ -82,6 +82,12 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('Products API error:', error);
+    if (error instanceof GenAIQuotaError) {
+      return NextResponse.json(
+        { error: error.message, retryAfterSeconds: error.retryAfterSeconds, code: 'QUOTA_EXHAUSTED' },
+        { status: 429 }
+      );
+    }
     return NextResponse.json({ error: 'Failed to generate product queries' }, { status: 500 });
   }
 }
