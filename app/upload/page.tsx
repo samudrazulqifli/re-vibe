@@ -8,18 +8,19 @@ import { useReVibeStore } from '@/src/lib/store';
 import { useCamera } from '@/src/hooks/useCamera';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/src/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 export default function UploadPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { videoRef, startCamera, stopCamera, capturePhoto, error, permissionState } = useCamera();
+  const { videoRef, startCamera, stopCamera, capturePhoto, error, permissionState, isInitializing } = useCamera();
   const { setPhoto } = useReVibeStore();
   const [isFlashOn, setIsFlashOn] = useState(false);
 
   useEffect(() => {
     startCamera();
     return () => stopCamera();
-  }, [startCamera, stopCamera]);
+  }, []);
 
   const handleCapture = async () => {
     const blob = await capturePhoto();
@@ -96,14 +97,24 @@ export default function UploadPage() {
       </div>
 
       <div className="flex-1 relative">
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted 
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
           className="w-full h-full object-cover"
         />
-        
+
+        {isInitializing && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gray-950/80 backdrop-blur-sm text-white">
+            <Loader2 size={36} className="animate-spin" />
+            <p className="text-[10px] font-black uppercase tracking-widest">Mengaktifkan Kamera…</p>
+            <p className="text-xs text-white/60 px-12 text-center leading-relaxed">
+              Klik "Izinkan" pada prompt browser untuk mengakses kamera.
+            </p>
+          </div>
+        )}
+
         {/* Rounded Rect Guide Overlay */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           <div className="w-[80%] aspect-[4/5] max-h-[60%] border-2 border-white/50 rounded-[48px] relative">
