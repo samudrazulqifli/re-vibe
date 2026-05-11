@@ -1,0 +1,13 @@
+{
+  "name": "Re-Vibe",
+  "description": "AI-powered mobile app to help Indonesian homeowners decide whether to repair or replace broken household items.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "AI Vision Analysis",
+    "Service Center Locator",
+    "DIY Tutorial Integration"
+  ]
+}
