@@ -18,35 +18,29 @@ export async function POST(req: Request) {
         {
           parts: [
             {
-              text: `You are a practical repair expert. Create a clear DIY repair guide in Bahasa Indonesia for the following:
+              text: `Kamu adalah pakar reparasi. Buat panduan DIY ringkas dalam Bahasa Indonesia.
               Item: ${itemName}
-              Damage: ${damageTypes?.join(", ")}
-              Difficulty: ${diyDifficulty}
+              Kerusakan: ${damageTypes?.join(", ")}
+              Tingkat kesulitan: ${diyDifficulty}
 
-              Return ONLY valid JSON:
-              {
-                "title": "judul panduan",
-                "estimatedTime": "estimasi waktu pengerjaan (misal: 30-45 menit)",
-                "difficulty": "Mudah | Sedang | Sulit",
-                "tools": ["list alat yang dibutuhkan"],
-                "materials": ["list bahan yang dibutuhkan"],
-                "steps": [
-                  {
-                    "stepNumber": 1,
-                    "title": "judul langkah",
-                    "description": "instruksi detail",
-                    "warning": "peringatan keamanan jika ada, atau null"
-                  }
-                ],
-                "safetyNotes": "catatan keamanan penting",
-                "youtubeSearchQuery": "query untuk YouTube search dalam Bahasa Indonesia yang spesifik"
-              }`
+              Batasan WAJIB (jangan dilanggar):
+              - tools: maksimal 6 item, setiap item maksimal 40 karakter.
+              - materials: maksimal 6 item, setiap item maksimal 40 karakter.
+              - steps: maksimal 6 langkah.
+              - description per langkah: 1-2 kalimat singkat (maks 200 karakter).
+              - title per langkah: maks 60 karakter.
+              - safetyNotes: maks 250 karakter.
+              - youtubeSearchQuery: maks 80 karakter.
+
+              Return HANYA JSON valid sesuai schema.`
             }
           ]
         }
       ],
       config: {
         responseMimeType: "application/json",
+        maxOutputTokens: 4096,
+        thinkingConfig: { thinkingBudget: 0 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -74,7 +68,16 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json(JSON.parse(response.text || '{}'));
+    const raw = response.text || '{}';
+    try {
+      return NextResponse.json(JSON.parse(raw));
+    } catch (parseErr) {
+      console.error('DIY JSON parse failed. Raw length:', raw.length, parseErr);
+      return NextResponse.json(
+        { error: 'AI returned malformed guide, coba lagi.', code: 'BAD_JSON' },
+        { status: 502 }
+      );
+    }
   } catch (error) {
     console.error('DIY API error:', error);
     if (error instanceof GenAIQuotaError) {
