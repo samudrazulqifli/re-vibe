@@ -4,6 +4,8 @@ import "@/src/index.css";
 import { BottomNav } from "@/src/components/layout/BottomNav";
 import { Toaster } from "react-hot-toast";
 import { PageTransition } from "@/src/components/PageTransition";
+import { AuthProvider } from "@/src/lib/firebase/auth-context";
+import { AuthGuard } from "@/src/components/auth/AuthGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,13 +30,17 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className={`${inter.className} bg-gray-50 flex justify-center min-h-screen`}>
-        <div className="w-full max-w-[440px] bg-white shadow-2xl relative flex flex-col min-h-screen">
-          <Toaster position="top-center" />
-          <PageTransition>
-            {children}
-          </PageTransition>
-          <BottomNav />
-        </div>
+        <AuthProvider>
+          <div className="w-full max-w-[440px] bg-white shadow-2xl relative flex flex-col min-h-screen">
+            <Toaster position="top-center" />
+            <AuthGuard>
+              <PageTransition>
+                {children}
+              </PageTransition>
+              <BottomNav />
+            </AuthGuard>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );
