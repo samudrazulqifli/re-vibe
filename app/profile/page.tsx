@@ -7,12 +7,12 @@ import { useRouter } from 'next/navigation';
 import { calculateStats } from '@/src/lib/history';
 import { useAuth } from '@/src/lib/firebase/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Settings, 
-  ChevronRight, 
-  BarChart3, 
-  PiggyBank, 
-  Trash2, 
+import {
+  Settings,
+  ChevronRight,
+  BarChart3,
+  PiggyBank,
+  Trash2,
   Info,
   Bell,
   Globe,
@@ -21,14 +21,27 @@ import {
   Mail,
   ShieldCheck,
   Cpu,
-  Trophy
+  Trophy,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import Image from 'next/image';
 
+function getInitials(name?: string | null): string {
+  if (!name) return 'RV';
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('') || 'RV';
+}
+
+function tierLabel(total: number): string {
+  if (total >= 20) return 'Pahlawan Lingkungan';
+  if (total >= 5) return 'Pejuang Reparasi';
+  return 'Pemula Re-Vibe';
+}
+
 export default function ProfilePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logOut } = useAuth();
   const [stats, setStats] = useState({ total: 0, savings: 0, itemsSold: 0 });
   const [showAbout, setShowAbout] = useState(false);
 
@@ -52,6 +65,11 @@ export default function ProfilePage() {
     { label: 'Beri Rating', icon: Star, action: () => {} },
     { label: 'Hubungi Kami', icon: Mail, action: () => {} },
     { label: 'Tentang Re-Vibe', icon: Info, action: () => setShowAbout(true) },
+    { label: 'Keluar', icon: LogOut, action: async () => {
+        if (!confirm('Yakin ingin keluar dari akun?')) return;
+        await logOut();
+        router.replace('/login');
+      }, danger: true },
   ];
 
   return (
@@ -62,16 +80,27 @@ export default function ProfilePage() {
         {/* User Profile Header */}
         <div className="flex flex-col items-center text-center gap-4 py-4">
           <div className="relative">
-            <div className="w-24 h-24 rounded-[32px] bg-primary flex items-center justify-center text-white text-3xl font-black shadow-2xl shadow-primary/30">
-              SZ
-            </div>
+            {user?.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.displayName ?? 'Avatar'}
+                referrerPolicy="no-referrer"
+                className="w-24 h-24 rounded-[32px] object-cover shadow-2xl shadow-primary/30"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-[32px] bg-primary flex items-center justify-center text-white text-3xl font-black shadow-2xl shadow-primary/30">
+                {getInitials(user?.displayName)}
+              </div>
+            )}
             <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white shadow-xl border-4 border-white flex items-center justify-center text-accent">
               <ShieldCheck size={20} fill="currentColor" stroke="white" />
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <h2 className="text-xl font-black text-gray-900 tracking-tight">Samudra Zulqifli</h2>
-            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Pahlawan Lingkungan</span>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">
+              {user?.displayName ?? 'Pengguna Re-Vibe'}
+            </h2>
+            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{tierLabel(stats.total)}</span>
           </div>
         </div>
 
@@ -114,7 +143,10 @@ export default function ProfilePage() {
                     <item.icon size={20} />
                   </div>
                   <div className="flex flex-col text-left">
-                    <span className="text-sm font-black text-gray-900">{item.label}</span>
+                    <span className={cn(
+                      "text-sm font-black",
+                      (item as any).danger ? "text-red-600" : "text-gray-900"
+                    )}>{item.label}</span>
                     {item.sub && <span className="text-[10px] text-gray-400 font-bold">{item.sub}</span>}
                   </div>
                 </div>
@@ -165,7 +197,7 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between px-2">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Powered By</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-gray-900">Gemini 1.5 Flash</span>
+                    <span className="text-[10px] font-black text-gray-900">Gemini 2.5 Flash</span>
                     <div className="w-4 h-4 rounded-full bg-blue-500" />
                   </div>
                 </div>
