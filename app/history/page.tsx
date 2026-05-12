@@ -4,8 +4,10 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { TopBar } from '@/src/components/layout/TopBar';
 import { BottomNav } from '@/src/components/layout/BottomNav';
 import { useRouter } from 'next/navigation';
-import { getHistory } from '@/src/lib/history';
+import { getHistory, deleteAnalysis } from '@/src/lib/history';
 import { AnalysisRecord } from '@/src/lib/types';
+import { useAuth } from '@/src/lib/firebase/auth-context';
+import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -24,15 +26,22 @@ import Image from 'next/image';
 
 export default function HistoryPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [history, setHistory] = useState<AnalysisRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'service' | 'diy' | 'buy'>('all');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setHistory(getHistory());
-    setIsLoading(false);
-  }, []);
+    if (!user) return;
+    let cancelled = false;
+    setIsLoading(true);
+    getHistory(user.uid)
+      .then((rows) => { if (!cancelled) setHistory(rows); })
+      .catch((e) => { console.error(e); toast.error('Gagal memuat riwayat'); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [user]);
 
   const formatDate = (ts: number) => {
     return new Intl.DateTimeFormat('id-ID', {

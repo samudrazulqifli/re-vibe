@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { TopBar } from '@/src/components/layout/TopBar';
 import { useRouter, useParams } from 'next/navigation';
 import { getAnalysisById, deleteAnalysis } from '@/src/lib/history';
+import { useAuth } from '@/src/lib/firebase/auth-context';
 import { AnalysisRecord } from '@/src/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -28,21 +29,27 @@ export default function HistoryDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  
+  const { user } = useAuth();
+
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'summary' | 'diy' | 'shop' | 'sell'>('summary');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const data = getAnalysisById(id);
-      if (data) setRecord(data);
-      else router.push('/history');
-    }
-  }, [id, router]);
+    if (!user) return;
+    getAnalysisById(user.uid, id)
+      .then((data) => {
+        if (data) setRecord(data);
+        else router.push('/history');
+      })
+      .catch((e) => { console.error(e); toast.error('Gagal memuat detail'); })
+      .finally(() => setLoading(false));
+  }, [user, id, router]);
 
-  const handleDelete = () => {
-    deleteAnalysis(id);
+  const handleDelete = async () => {
+    if (!user) return;
+    await deleteAnalysis(user.uid, id);
     toast.success('Analisa berhasil dihapus');
     router.push('/history');
   };
@@ -67,6 +74,7 @@ export default function HistoryDetailPage() {
     }
   };
 
+  if (loading) return null;
   if (!record) return null;
 
   return (
