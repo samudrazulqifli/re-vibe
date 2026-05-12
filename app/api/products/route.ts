@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from "@google/genai";
 import { generateWithRetry, GenAIQuotaError } from '@/src/lib/genai';
+import { requireAuthedUser } from '@/src/lib/firebase/api-auth';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export async function POST(req: Request) {
+  const auth = await requireAuthedUser(req);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { itemName, itemCategory, priceMin, priceMax } = await req.json();
 
