@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { TopBar } from '@/src/components/layout/TopBar';
 import { BottomNav } from '@/src/components/layout/BottomNav';
 import { useRouter } from 'next/navigation';
-import { calculateStats, getHistory } from '@/src/lib/history';
+import { calculateStats } from '@/src/lib/history';
+import { useAuth } from '@/src/lib/firebase/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
@@ -27,12 +28,14 @@ import Image from 'next/image';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [stats, setStats] = useState({ total: 0, savings: 0, itemsSold: 0 });
   const [showAbout, setShowAbout] = useState(false);
 
   useEffect(() => {
-    setStats(calculateStats());
-  }, []);
+    if (!user) return;
+    calculateStats(user.uid).then(setStats).catch(console.error);
+  }, [user]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('id-ID', {

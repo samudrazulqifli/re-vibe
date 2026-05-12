@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { TopBar } from '@/src/components/layout/TopBar';
 import { useRouter } from 'next/navigation';
 import { useReVibeStore } from '@/src/lib/store';
+import { saveAnalysis } from '@/src/lib/history';
+import { useAuth } from '@/src/lib/firebase/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, 
@@ -33,7 +35,8 @@ interface ScrapData {
 
 export default function SellPage() {
   const router = useRouter();
-  const { currentAnalysis, addToHistory, resetFlow } = useReVibeStore();
+  const { user } = useAuth();
+  const { currentAnalysis, resetFlow } = useReVibeStore();
   
   const [scrapData, setScrapData] = useState<ScrapData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,17 +82,21 @@ export default function SellPage() {
     fetchScrapValue();
   }, [currentAnalysis, router]);
 
-  const handleFinish = () => {
-    if (currentAnalysis) {
+  const handleFinish = async () => {
+    if (currentAnalysis && user) {
       const { recommendation, selectedAction } = useReVibeStore.getState();
-      addToHistory({
-        ...currentAnalysis,
-        id: crypto.randomUUID(),
-        imageUrl: currentAnalysis.imageUrl || '',
-        timestamp: Date.now(),
-        recommendation: recommendation || undefined,
-        selectedAction: selectedAction || undefined
-      } as any);
+      try {
+        await saveAnalysis(user.uid, {
+          ...currentAnalysis,
+          id: crypto.randomUUID(),
+          imageUrl: currentAnalysis.imageUrl || '',
+          timestamp: Date.now(),
+          recommendation: recommendation || undefined,
+          selectedAction: selectedAction || undefined
+        } as any);
+      } catch (e) {
+        console.error(e);
+      }
     }
     resetFlow();
     router.push('/');
