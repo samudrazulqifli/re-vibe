@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import toast from 'react-hot-toast';
+import { authFetch } from '@/src/lib/firebase/auth-fetch';
 
 interface DIYStep {
   stepNumber: number;
@@ -68,7 +69,7 @@ export default function DIYPage() {
     const fetchData = async () => {
       try {
         // Fetch DIY Guide
-        const guideDataRes = await fetch('/api/diy', {
+        const guideDataRes = await authFetch('/api/diy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

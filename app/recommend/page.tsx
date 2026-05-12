@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import toast from 'react-hot-toast';
+import { authFetch } from '@/src/lib/firebase/auth-fetch';
 
 export default function RecommendPage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function RecommendPage() {
 
     const fetchRecommendation = async () => {
       try {
-        const response = await fetch('/api/recommend', {
+        const response = await authFetch('/api/recommend', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

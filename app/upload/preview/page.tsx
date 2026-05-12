@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, RefreshCw, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/src/lib/utils';
+import { authFetch } from '@/src/lib/firebase/auth-fetch';
 
 export default function PreviewPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function PreviewPage() {
         setUploadProgress(prev => Math.min(prev + 5, 90));
       }, 100);
 
-      const response = await fetch('/api/upload', {
+      const response = await authFetch('/api/upload', {
         method: 'POST',
         body: formData,
       });

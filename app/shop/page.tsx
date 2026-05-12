@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import toast from 'react-hot-toast';
+import { authFetch } from '@/src/lib/firebase/auth-fetch';
 
 interface ProductSuggestion {
   name: string;
@@ -60,7 +61,7 @@ export default function ShopPage() {
 
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/products', {
+        const response = await authFetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

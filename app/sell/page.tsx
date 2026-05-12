@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import toast from 'react-hot-toast';
+import { authFetch } from '@/src/lib/firebase/auth-fetch';
 
 interface ScrapData {
   scrapValueRange: string;
@@ -50,7 +51,7 @@ export default function SellPage() {
 
     const fetchScrapValue = async () => {
       try {
-        const response = await fetch('/api/scrap-value', {
+        const response = await authFetch('/api/scrap-value', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

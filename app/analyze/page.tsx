@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useReVibeStore } from '@/src/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Microscope, Zap, ShieldCheck, AlertCircle, RefreshCw, Sprout } from 'lucide-react';
+import { authFetch } from '@/src/lib/firebase/auth-fetch';
 import toast from 'react-hot-toast';
 
 const steps = [
@@ -27,7 +28,7 @@ export default function AnalyzePage() {
 
     const analyzeImage = async () => {
       try {
-        const response = await fetch('/api/analyze', {
+        const response = await authFetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
