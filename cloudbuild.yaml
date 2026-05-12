@@ -1,13 +1,22 @@
+substitutions:
+  _AR_HOSTNAME: asia-southeast2-docker.pkg.dev
+  _AR_PROJECT_ID: re-vibe-496006
+  _AR_REPOSITORY: cloud-run-source-deploy
+  _DEPLOY_REGION: asia-southeast2
+  _SERVICE_NAME: re-vibe
+
 steps:
-  # Build — baca NEXT_PUBLIC_FIREBASE_* langsung dari Cloud Run env vars (tidak hardcode)
+  # Step 1: baca NEXT_PUBLIC_FIREBASE_* dari Cloud Run, lalu docker build
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: bash
+    id: Build
     args:
       - -c
       - |
-        FIREBASE_ARGS=$(gcloud run services describe re-vibe \
-          --region=asia-southeast2 \
-          --project=$PROJECT_ID \
+        IMAGE=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/re-vibe/$_SERVICE_NAME:$COMMIT_SHA
+        FIREBASE_ARGS=$(gcloud run services describe $_SERVICE_NAME \
+          --region=$_DEPLOY_REGION \
+          --project=$_AR_PROJECT_ID \
           --format=json | \
         python3 -c "
         import json, sys
@@ -19,31 +28,28 @@ steps:
                 val = e.get('value', '')
                 print(f'--build-arg {name}={val}', end=' ')
         ")
-        docker build $$FIREBASE_ARGS \
-          -t gcr.io/$PROJECT_ID/re-vibe:$COMMIT_SHA .
+        docker build --no-cache $FIREBASE_ARGS -t $IMAGE -f Dockerfile .
 
-  # Push the container image to Container Registry
+  # Step 2: push ke Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/re-vibe:$COMMIT_SHA']
+    id: Push
+    args:
+      - push
+      - '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/re-vibe/$_SERVICE_NAME:$COMMIT_SHA'
 
-  # Deploy container image to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  # Step 3: deploy ke Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    id: Deploy
     entrypoint: gcloud
     args:
-      - 'run'
-      - 'deploy'
-      - 're-vibe'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/re-vibe:$COMMIT_SHA'
-      - '--region'
-      - 'asia-southeast2'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
-      - '--memory'
-      - '512Mi'
-      - '--cpu'
-      - '1'
+      - run
+      - services
+      - update
+      - $_SERVICE_NAME
+      - --platform=managed
+      - --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/re-vibe/$_SERVICE_NAME:$COMMIT_SHA
+      - --region=$_DEPLOY_REGION
+      - --quiet
 
 images:
-  - 'gcr.io/$PROJECT_ID/re-vibe:$COMMIT_SHA'
+  - '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/re-vibe/$_SERVICE_NAME:$COMMIT_SHA'
