@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { getFirebaseAuth, googleProvider } from './client';
 import { ensureUserDoc } from './user-data';
+import { migrateLocalHistory } from './migrate';
 
 interface AuthContextValue {
   user: User | null;
@@ -24,6 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         try { await ensureUserDoc(u); } catch (e) { console.error('ensureUserDoc failed', e); }
+        try {
+          const n = await migrateLocalHistory(u.uid);
+          if (n > 0) console.info(`migrated ${n} legacy analyses to Firestore`);
+        } catch (e) {
+          console.error('migrateLocalHistory failed', e);
+        }
       }
       setUser(u);
       setLoading(false);
