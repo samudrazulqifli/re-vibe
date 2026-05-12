@@ -1,6 +1,9 @@
+"use client";
+
 import React from 'react';
 import { Camera, Image as ImageIcon, Sparkles, Sprout, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useAuth } from '@/src/lib/firebase/auth-context';
 
 interface HomeProps {
   onCapture: (file: File) => void;
@@ -12,6 +15,9 @@ export function Home({ onCapture }: HomeProps) {
     if (file) onCapture(file);
   };
 
+  const { user } = useAuth();
+  const firstName = user?.displayName?.split(' ')[0] ?? 'Sobat';
+
   return (
     <div className="flex flex-col gap-8 px-6 py-8">
       <motion.div 
@@ -19,6 +25,7 @@ export function Home({ onCapture }: HomeProps) {
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col gap-2"
       >
+        <span className="text-xs font-bold text-gray-400 tracking-wide">Hai, {firstName} 👋</span>
         <span className="text-secondary font-bold text-sm tracking-wide uppercase">#JuaraVibeCoding</span>
         <h2 className="text-3xl font-bold text-gray-900 leading-tight">
           Hemat Uang, <br />
