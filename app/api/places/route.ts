@@ -26,7 +26,8 @@ export async function POST(req: Request) {
             radius
           }
         },
-        maxResultCount: 20
+        maxResultCount: 20,
+        rankPreference: 'DISTANCE'
       })
     });
 
@@ -38,18 +39,23 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    const places = (data.places || []).map((p: any) => ({
-      placeId: p.id,
-      name: p.displayName?.text || 'Unnamed Place',
-      address: p.formattedAddress || '',
-      lat: p.location?.latitude,
-      lng: p.location?.longitude,
-      rating: p.rating || 0,
-      userRatingsTotal: p.userRatingCount || 0,
-      openNow: p.currentOpeningHours?.openNow ?? null,
-      phoneNumber: p.internationalPhoneNumber || '',
-      distance: calculateDistance(lat, lng, p.location?.latitude, p.location?.longitude)
-    }));
+    const radiusKm = radius / 1000;
+    const places = (data.places || [])
+      .map((p: any) => ({
+        placeId: p.id,
+        name: p.displayName?.text || 'Unnamed Place',
+        address: p.formattedAddress || '',
+        lat: p.location?.latitude,
+        lng: p.location?.longitude,
+        rating: p.rating || 0,
+        userRatingsTotal: p.userRatingCount || 0,
+        openNow: p.currentOpeningHours?.openNow ?? null,
+        phoneNumber: p.internationalPhoneNumber || '',
+        distance: calculateDistance(lat, lng, p.location?.latitude, p.location?.longitude),
+      }))
+      // Strictly within requested radius — Places API only biases, doesn't filter
+      .filter((p: any) => p.distance > 0 && p.distance <= radiusKm)
+      .sort((a: any, b: any) => a.distance - b.distance);
 
     return NextResponse.json({ places });
   } catch (error) {

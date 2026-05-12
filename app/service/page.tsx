@@ -53,30 +53,41 @@ export default function ServicePage() {
   const [radius, setRadius] = useState(5000);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'nearby' | 'rating' | 'open'>('nearby');
-  const [manualLocationInput, setManualLocationInput] = useState('');
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const requestLocation = () => {
+    setLocationError(null);
+    setIsLoading(true);
+    if (!("geolocation" in navigator)) {
+      setLocationError('Browser tidak mendukung geolocation.');
+      setIsLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (error) => {
+        const msg = error.code === error.PERMISSION_DENIED
+          ? 'Izin lokasi ditolak. Aktifkan di setting browser lalu coba lagi.'
+          : 'Tidak bisa mendapatkan lokasi GPS. Coba lagi atau perluas radius.';
+        setLocationError(msg);
+        toast.error(msg);
+        setIsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
   // Initial location request
   useEffect(() => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          toast.error("Gagal mendapatkan lokasi otomatis. Masukkan lokasi secara manual.");
-          setIsLoading(false);
-        }
-      );
-    } else {
-      setIsLoading(false);
-    }
+    requestLocation();
   }, []);
 
   // Fetch places when location or radius changes
@@ -186,14 +197,21 @@ export default function ServicePage() {
         {/* Top Half: Map */}
         <div className="h-[45%] relative">
           {!userLocation && !isLoading ? (
-            <div className="h-full w-full bg-gray-100 flex flex-col items-center justify-center p-8 gap-4">
-              <Navigation size={48} className="text-gray-300 animate-pulse" />
+            <div className="h-full w-full bg-gray-100 flex flex-col items-center justify-center p-8 gap-5">
+              <Navigation size={48} className="text-gray-300" />
               <div className="flex flex-col gap-2 text-center max-w-xs">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Membutuhkan Lokasi</p>
-                <p className="text-sm text-gray-400 font-medium italic leading-relaxed">
-                  Izinkan akses lokasi di browser kamu agar kami bisa mencarikan bengkel resmi terdekat.
+                <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                  {locationError ?? 'Izinkan akses lokasi di browser kamu agar kami bisa mencarikan service center terdekat.'}
                 </p>
               </div>
+              <button
+                onClick={requestLocation}
+                className="bg-primary text-white font-bold text-xs px-6 py-3 rounded-full shadow-lg active:scale-95 transition flex items-center gap-2"
+              >
+                <Navigation size={14} />
+                Aktifkan Lokasi
+              </button>
             </div>
           ) : (
             <Map
