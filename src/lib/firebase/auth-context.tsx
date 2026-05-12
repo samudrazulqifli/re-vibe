@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { getFirebaseAuth, googleProvider } from './client';
+import { ensureUserDoc } from './user-data';
 
 interface AuthContextValue {
   user: User | null;
@@ -20,7 +21,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        try { await ensureUserDoc(u); } catch (e) { console.error('ensureUserDoc failed', e); }
+      }
       setUser(u);
       setLoading(false);
     });
