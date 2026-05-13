@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { TopBar } from '@/src/components/layout/TopBar';
 import { useRouter } from 'next/navigation';
 import { useReVibeStore } from '@/src/lib/store';
@@ -59,12 +59,18 @@ export default function DIYPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isToolsExpanded, setIsToolsExpanded] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const startedRef = useRef(false);
 
   useEffect(() => {
     if (!currentAnalysis || !recommendation) {
       router.push('/upload');
       return;
     }
+
+    // Guard: hanya fetch sekali per mount. Tanpa ini, kalau StrictMode atau
+    // dependency lain berubah, /api/diy + Gemini akan re-call dan hasilnya beda.
+    if (startedRef.current || guide) return;
+    startedRef.current = true;
 
     const fetchData = async () => {
       try {

@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { TopBar } from '@/src/components/layout/TopBar';
 import { useRouter } from 'next/navigation';
 import { useReVibeStore } from '@/src/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Wrench, 
-  ShoppingBag, 
-  BookOpen, 
-  ChevronRight, 
-  Info, 
-  TrendingDown, 
+import {
+  Wrench,
+  ShoppingBag,
+  BookOpen,
+  ChevronRight,
+  Info,
+  TrendingDown,
   AlertCircle,
   Banknote,
   LayoutGrid,
@@ -20,11 +20,15 @@ import {
 import { cn } from '@/src/lib/utils';
 import toast from 'react-hot-toast';
 import { authFetch } from '@/src/lib/firebase/auth-fetch';
+import { useAuth } from '@/src/lib/firebase/auth-context';
+import { updateAnalysis } from '@/src/lib/history';
 
 export default function RecommendPage() {
   const router = useRouter();
   const { currentAnalysis, recommendation, setRecommendation, setSelectedAction, userDescription } = useReVibeStore();
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(!recommendation);
+  const startedRef = useRef(false);
 
   const formatIDR = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -39,6 +43,17 @@ export default function RecommendPage() {
       router.push('/upload');
       return;
     }
+
+    // Guard: kalau sudah ada recommendation di store, JANGAN re-fetch.
+    // Tanpa ini, navigasi kembali ke /recommend akan trigger panggilan Gemini lagi
+    // dan menghasilkan rekomendasi yang berbeda (Gemini non-deterministic).
+    if (recommendation) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (startedRef.current) return;
+    startedRef.current = true;
 
     const fetchRecommendation = async () => {
       try {
@@ -59,7 +74,14 @@ export default function RecommendPage() {
 
         const data = await response.json();
         setRecommendation(data);
+
+        // Persist recommendation ke record yang sudah ada di Firestore
+        if (user && currentAnalysis.id) {
+          try { await updateAnalysis(user.uid, currentAnalysis.id, { recommendation: data }); }
+          catch (e) { console.error('updateAnalysis recommendation failed:', e); }
+        }
       } catch (err) {
+        startedRef.current = false;
         console.error('Recommend fetch error:', err);
         toast.error('Gagal mengambil rekomendasi AI.');
       } finally {
@@ -68,10 +90,15 @@ export default function RecommendPage() {
     };
 
     fetchRecommendation();
-  }, [currentAnalysis, router, setRecommendation, userDescription]);
+  }, [currentAnalysis, recommendation, router, setRecommendation, userDescription, user]);
 
-  const handleAction = (type: 'service' | 'diy' | 'buy') => {
+  const handleAction = async (type: 'service' | 'diy' | 'buy') => {
     setSelectedAction(type);
+    // Persist user choice ke Firestore — pakai update (merge) supaya analysis fields tetap utuh
+    if (user && currentAnalysis?.id) {
+      try { await updateAnalysis(user.uid, currentAnalysis.id, { selectedAction: type }); }
+      catch (e) { console.error('updateAnalysis selectedAction failed:', e); }
+    }
     if (type === 'service') router.push('/service');
     else if (type === 'diy') router.push('/diy');
     else if (type === 'buy') router.push('/shop');

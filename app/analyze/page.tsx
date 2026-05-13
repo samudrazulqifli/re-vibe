@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useReVibeStore } from '@/src/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Microscope, Zap, ShieldCheck, AlertCircle, RefreshCw, Sprout } from 'lucide-react';
 import { authFetch } from '@/src/lib/firebase/auth-fetch';
+import { useAuth } from '@/src/lib/firebase/auth-context';
+import { saveAnalysis } from '@/src/lib/history';
+import type { AnalysisRecord } from '@/src/lib/types';
 import toast from 'react-hot-toast';
 
 const steps = [
@@ -16,9 +19,11 @@ const steps = [
 
 export default function AnalyzePage() {
   const router = useRouter();
-  const { photoPreviewUrl, uploadedImageUrl, userDescription, setAnalysis } = useReVibeStore();
+  const { photoPreviewUrl, uploadedImageUrl, userDescription, currentAnalysis, setAnalysis } = useReVibeStore();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
     if (!uploadedImageUrl) {
@@ -26,27 +31,65 @@ export default function AnalyzePage() {
       return;
     }
 
+    // Guard: kalau sudah dianalisa untuk imageUrl yang sama, skip — langsung ke result.
+    // Tanpa ini, /api/analyze dipanggil lagi setiap kali user navigate kembali ke /analyze,
+    // dan Gemini non-deterministic akan kasih hasil yang BEDA setiap call.
+    if (currentAnalysis?.imageUrl === uploadedImageUrl && currentAnalysis?.id) {
+      router.replace('/result');
+      return;
+    }
+
+    // StrictMode dev double-invoke + remount safety
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     const analyzeImage = async () => {
       try {
         const response = await authFetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             imageUrl: uploadedImageUrl,
-            userDescription 
+            userDescription
           }),
         });
 
         if (!response.ok) throw new Error('Gagal menganalisis gambar');
 
         const result = await response.json();
-        setAnalysis(result);
-        
+
+        // Build the canonical record once — same id will be used for subsequent updates
+        // (recommendation di /recommend, selectedAction di /service|/diy|/sell).
+        const record: AnalysisRecord = {
+          id: crypto.randomUUID(),
+          imageUrl: uploadedImageUrl,
+          timestamp: Date.now(),
+          itemName: result.itemName,
+          itemCategory: result.itemCategory,
+          damageTypes: result.damageTypes ?? [],
+          severity: result.severity,
+          severityScore: result.severityScore,
+          confidence: result.confidence,
+          isRepairable: result.isRepairable,
+          damageDescription: result.damageDescription,
+          estimatedAge: result.estimatedAge,
+        };
+
+        setAnalysis(record);
+
+        // Persist ke Firestore segera setelah analyze sukses — biar user tidak kehilangan
+        // record kalau tutup browser sebelum sampai /recommend atau /sell.
+        if (user) {
+          try { await saveAnalysis(user.uid, record); }
+          catch (e) { console.error('saveAnalysis after analyze failed:', e); }
+        }
+
         // Wait a small bit for dramatic effect
         setTimeout(() => {
           router.push('/result');
         }, 1500);
       } catch (err) {
+        startedRef.current = false; // allow retry
         console.error('Analysis error:', err);
         setError('Terjadi kesalahan saat menganalisis. Mohon coba lagi.');
         toast.error('Gagal menganalisis gambar.');
@@ -61,7 +104,7 @@ export default function AnalyzePage() {
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [uploadedImageUrl, userDescription, router, setAnalysis]);
+  }, [uploadedImageUrl, userDescription, currentAnalysis, router, setAnalysis, user]);
 
   if (error) {
     return (

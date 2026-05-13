@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { TopBar } from '@/src/components/layout/TopBar';
 import { useRouter } from 'next/navigation';
 import { useReVibeStore } from '@/src/lib/store';
-import { saveAnalysis } from '@/src/lib/history';
-import { useAuth } from '@/src/lib/firebase/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, 
@@ -36,7 +34,6 @@ interface ScrapData {
 
 export default function SellPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const { currentAnalysis, resetFlow } = useReVibeStore();
   
   const [scrapData, setScrapData] = useState<ScrapData | null>(null);
@@ -84,21 +81,9 @@ export default function SellPage() {
   }, [currentAnalysis, router]);
 
   const handleFinish = async () => {
-    if (currentAnalysis && user) {
-      const { recommendation, selectedAction } = useReVibeStore.getState();
-      try {
-        await saveAnalysis(user.uid, {
-          ...currentAnalysis,
-          id: crypto.randomUUID(),
-          imageUrl: currentAnalysis.imageUrl || '',
-          timestamp: Date.now(),
-          recommendation: recommendation || undefined,
-          selectedAction: selectedAction || undefined
-        } as any);
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    // Record sudah dibuat di /analyze dan di-update dengan recommendation + selectedAction
+    // di /recommend. Di sini kita hanya merge timestamp action terakhir (opsional) dan
+    // reset flow. Tidak boleh saveAnalysis lagi karena akan bikin duplicate doc id baru.
     resetFlow();
     router.push('/');
   };

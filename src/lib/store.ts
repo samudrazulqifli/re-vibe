@@ -29,7 +29,16 @@ export const useReVibeStore = create<ReVibeState>((set) => ({
   recommendation: null,
   selectedAction: null,
 
-  setPhoto: (file, url) => set({ uploadedPhoto: file, photoPreviewUrl: url }),
+  setPhoto: (file, url) => set({
+    uploadedPhoto: file,
+    photoPreviewUrl: url,
+    // Reset downstream state — new photo invalidates any previous AI result.
+    // Without this, /recommend & /diy show stale results from the previous photo.
+    uploadedImageUrl: null,
+    currentAnalysis: null,
+    recommendation: null,
+    selectedAction: null,
+  }),
   setUploadedImageUrl: (url) => set({ uploadedImageUrl: url }),
   setDescription: (desc) => set({ userDescription: desc }),
   setAnalysis: (analysis) => set({ currentAnalysis: analysis }),

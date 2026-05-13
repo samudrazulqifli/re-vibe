@@ -29,6 +29,16 @@ export async function addAnalysis(uid: string, record: AnalysisRecord): Promise<
   await setDoc(ref, record);
 }
 
+export async function updateAnalysis(
+  uid: string,
+  id: string,
+  partial: Partial<AnalysisRecord>
+): Promise<void> {
+  const db = getDb();
+  const ref = doc(db, 'users', uid, 'analyses', id);
+  await setDoc(ref, partial, { merge: true });
+}
+
 export async function getAnalyses(uid: string): Promise<AnalysisRecord[]> {
   const db = getDb();
   const col = collection(db, 'users', uid, 'analyses');

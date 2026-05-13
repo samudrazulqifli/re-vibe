@@ -1,5 +1,6 @@
 export {
   addAnalysis as saveAnalysis,
+  updateAnalysis,
   getAnalyses as getHistory,
   getAnalysisById,
   deleteAnalysis,
